@@ -39,6 +39,7 @@ def main(config):
 
     # prepare for (multi-device) GPU training
     device, device_ids = prepare_device(config["n_gpu"])
+    print("Device:", device)
     model = model.to(device)
     if len(device_ids) > 1:
         model = torch.nn.DataParallel(model, device_ids=device_ids)
@@ -66,7 +67,8 @@ def main(config):
         data_loader=dataloaders["train"],
         valid_data_loader=dataloaders["val"],
         lr_scheduler=lr_scheduler,
-        len_epoch=config["trainer"].get("len_epoch", None)
+        len_epoch=config["trainer"].get("len_epoch", None),
+        log_step=config["trainer"].get("log_step", None)
     )
 
     trainer.train()

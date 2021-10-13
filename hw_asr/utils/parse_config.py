@@ -53,11 +53,12 @@ class ConfigParser:
         """
         for opt in options:
             args.add_argument(*opt.flags, default=None, type=opt.type)
-        if not isinstance(args, tuple):
-            args = args.parse_args()
+        
+        args = args.parse_args()
 
         if args.device is not None:
             os.environ["CUDA_VISIBLE_DEVICES"] = args.device
+
         if args.resume is not None:
             resume = Path(args.resume)
             cfg_fname = resume.parent / "config.json"
@@ -67,9 +68,10 @@ class ConfigParser:
             resume = None
             cfg_fname = Path(args.config)
 
+        print("Reading confing from ", cfg_fname)
         config = read_json(cfg_fname)
         if args.config and resume:
-            # update new config for fine-tuning
+            print("Update config for fine-tuning from ", args.config)
             config.update(read_json(args.config))
 
         # parse custom cli options into dictionary

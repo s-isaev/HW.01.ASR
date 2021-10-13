@@ -2,7 +2,6 @@ import random
 from random import shuffle
 
 import PIL
-import jiwer
 import torch
 import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
@@ -11,7 +10,7 @@ from tqdm import tqdm
 
 from hw_asr.base import BaseTrainer
 from hw_asr.logger.utils import plot_spectrogram_to_buf
-from hw_asr.metric.utils import calc_cer
+from hw_asr.metric.utils import calc_cer, calc_wer
 from hw_asr.utils import inf_loop, MetricTracker
 
 
@@ -33,7 +32,8 @@ class Trainer(BaseTrainer):
             valid_data_loader=None,
             lr_scheduler=None,
             len_epoch=None,
-            skip_oom=True
+            skip_oom=True,
+            log_step=None
     ):
         super().__init__(model, criterion, metrics, optimizer, config, device)
         self.skip_oom = skip_oom
@@ -50,7 +50,7 @@ class Trainer(BaseTrainer):
         self.valid_data_loader = valid_data_loader
         self.do_validation = self.valid_data_loader is not None
         self.lr_scheduler = lr_scheduler
-        self.log_step = 10
+        self.log_step = 10 if log_step is None else log_step
 
         self.train_metrics = MetricTracker(
             "loss", "grad norm", *[m.name for m in self.metrics], writer=self.writer
@@ -204,7 +204,9 @@ class Trainer(BaseTrainer):
         # TODO: implement logging of beam search results
         if self.writer is None:
             return
-        predictions = log_probs.cpu().argmax(-1)
+        predictions = log_probs.cpu().argmax(-1).tolist()
+        for i, log_len in enumerate(log_probs_length.tolist()):
+            predictions[i] = predictions[i][:log_len]
         pred_texts = [self.text_encoder.ctc_decode(p) for p in predictions]
         argmax_pred_texts = [
             self.text_encoder.decode(p)[: int(l)]
@@ -215,7 +217,7 @@ class Trainer(BaseTrainer):
         to_log_pred = []
         to_log_pred_raw = []
         for pred, target, raw_pred in tuples[:examples_to_log]:
-            wer = jiwer.wer(target, pred) * 100
+            wer = calc_wer(target, pred) * 100
             cer = calc_cer(target, pred) * 100
             to_log_pred.append(
                 f"true: '{target}' | pred: '{pred}' " f"| wer: {wer:.2f} | cer: {cer:.2f}")

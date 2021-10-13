@@ -31,7 +31,10 @@ def collate_fn(dataset_items: List[dict]):
         max_text_encoded_len
     )
     batch_text_encoded_length = torch.zeros(
-        len(dataset_items)
+        len(dataset_items), dtype=torch.int32
+    )
+    batch_spectrogram_length = torch.zeros(
+        len(dataset_items), dtype=torch.int32
     )
     batch_text = []
 
@@ -41,11 +44,13 @@ def collate_fn(dataset_items: List[dict]):
         batch_text_encoded[i, :dataset_item['text_encoded'].shape[1]] = \
             dataset_item['text_encoded'].squeeze()
         batch_text_encoded_length[i] = dataset_item['text_encoded'].shape[1]
+        batch_spectrogram_length[i] = dataset_item['spectrogram'].shape[2]
         batch_text.append(dataset_item['text'])
 
-    result_batch['spectrogram'] = batch_spectograms
+    result_batch['spectrogram'] = torch.swapaxes(batch_spectograms, 1, 2)
     result_batch['text_encoded'] = batch_text_encoded
     result_batch['text_encoded_length'] = batch_text_encoded_length
+    result_batch['spectrogram_length'] = batch_spectrogram_length
     result_batch['text'] = batch_text
 
     return result_batch

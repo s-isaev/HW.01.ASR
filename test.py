@@ -124,9 +124,10 @@ if __name__ == "__main__":
         help="Number of workers for test dataloader"
     )
 
-    test_data_folder = Path(args.test_data_folder)
+    config = ConfigParser.from_args(args)
 
-    config = ConfigParser.from_args(DEFAULT_TEST_CONFIG_PATH)
+    args = args.parse_args()
+    test_data_folder = Path(args.test_data_folder)
     config.config["data"] = {
         "test": {
             "batch_size": args.batch_size,

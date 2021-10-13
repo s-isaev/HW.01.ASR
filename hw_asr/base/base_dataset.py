@@ -57,12 +57,13 @@ class BaseDataset(Dataset):
         audio_path = data_dict["path"]
         audio_wave = self.load_audio(audio_path)
         audio_wave, audio_spec = self.process_wave(audio_wave)
+        text = BaseTextEncoder.normalize_text(data_dict["text"])
         return {
             "audio": audio_wave,
             "spectrogram": audio_spec,
             "duration": data_dict["audio_len"],
-            "text": data_dict["text"],
-            "text_encoded": self.text_encoder.encode(data_dict["text"]),
+            "text": text,
+            "text_encoded": self.text_encoder.encode(text),
             "audio_path": audio_path,
         }
 
@@ -99,43 +100,39 @@ class BaseDataset(Dataset):
             index: list, max_audio_length, max_text_length, limit
     ) -> list:
         initial_size = len(index)
+
+        index_new = []
+        exceeds_audio_length = 0
+        exceeds_text_length = 0
+        for el in index:
+            good_example = True
+            if max_audio_length is not None and \
+                el["audio_len"] > max_audio_length:
+                good_example = False
+                exceeds_audio_length += 1
+            if max_text_length is not None and \
+                len(BaseTextEncoder.normalize_text(el["text"])) > max_text_length:
+                good_example = False
+                exceeds_text_length += 1
+            if good_example:
+                index_new.append(el)
+
         if max_audio_length is not None:
-            exceeds_audio_length = np.array(
-                [el for el in index if el["length"] <= max_audio_length]
-            )
-            _total = exceeds_audio_length.sum()
             logger.info(
-                f"{_total} ({_total / initial_size:.1%}) records are longer then "
+                f"{exceeds_audio_length} ({exceeds_audio_length / initial_size:.1%}) records are longer then "
                 f"{max_audio_length} seconds. Excluding them."
             )
-        else:
-            exceeds_audio_length = False
-
-        initial_size = len(index)
-        if max_audio_length is not None:
-            exceeds_text_length = np.array(
-                [
-                    el
-                    for el in index
-                    if len(BaseTextEncoder.normalize_text(el["text"])) <= max_text_length
-                ]
-            )
-            _total = exceeds_text_length.sum()
+        if max_text_length is not None:
             logger.info(
-                f"{_total} ({_total / initial_size:.1%}) records are longer then "
-                f"{max_audio_length} characters. Excluding them."
+                f"{exceeds_text_length} ({exceeds_text_length / initial_size:.1%}) records are longer then "
+                f"{max_text_length} characters. Excluding them."
             )
-        else:
-            exceeds_text_length = False
-
-        records_to_filter = exceeds_text_length | exceeds_audio_length
-
-        if records_to_filter is not False and records_to_filter.any():
-            _total = records_to_filter.sum()
-            index = [el for el, exclude in zip(index, records_to_filter) if not exclude]
-            logger.info(
-                f"Filtered {_total}({_total / initial_size:.1%}) records  from dataset"
-            )
+        index = index_new
+        
+        filtered = initial_size - len(index)
+        logger.info(
+            f"Filtered {filtered} ({filtered / initial_size:.1%}) records  from dataset"
+        )
 
         if limit is not None:
             random.seed(42)  # best seed for deep learning

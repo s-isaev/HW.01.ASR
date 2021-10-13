@@ -1,6 +1,6 @@
 torch
 torchvision
-numpy
+numpy<=1.20
 tqdm
 tensorboard
 

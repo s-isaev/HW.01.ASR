@@ -24,7 +24,7 @@ class CTCCharTextEncoder(CharTextEncoder):
         for ind in inds:
             if ind != 0 and ind != last:
                 inds_no_empty.append(ind)
-                last = ind
+            last = ind
 
         res = ''
         for ind in inds_no_empty:
