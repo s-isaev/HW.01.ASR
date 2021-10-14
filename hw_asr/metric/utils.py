@@ -7,7 +7,8 @@ def calc_cer(target_text, predicted_text) -> float:
 
 def calc_wer(target_text, predicted_text) -> float:
     # TODO: your code here
-    # if metrics.calculate_wer(target_text, predicted_text) != 0:
-    #     print(target_text)
-    #     print(predicted_text)
+    wer = metrics.calculate_wer(target_text, predicted_text)
+    if wer != 0 and wer < 0.03:
+        print(target_text)
+        print(predicted_text)
     return metrics.calculate_wer(target_text, predicted_text)
