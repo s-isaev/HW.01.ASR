@@ -204,26 +204,26 @@ class Trainer(BaseTrainer):
         # TODO: implement logging of beam search results
         if self.writer is None:
             return
+
         predictions = log_probs.cpu().argmax(-1).tolist()
         for i, log_len in enumerate(log_probs_length.tolist()):
             predictions[i] = predictions[i][:log_len]
-        pred_texts = [self.text_encoder.ctc_decode(p) for p in predictions]
-        argmax_pred_texts = [
-            self.text_encoder.decode(p)[: int(l)]
-            for p, l in zip(predictions, log_probs_length)
-        ]
-        tuples = list(zip(pred_texts, text, argmax_pred_texts))
+
+        ctc_pred_text = [self.text_encoder.ctc_decode(p) for p in predictions]
+        raw_pred_text = [self.text_encoder.decode(p) for p in predictions]
+
+        tuples = list(zip(text, raw_pred_text, ctc_pred_text))
         shuffle(tuples)
-        to_log_pred = []
+        to_log_pred_ctc = []
         to_log_pred_raw = []
-        for pred, target, raw_pred in tuples[:examples_to_log]:
-            wer = calc_wer(target, pred) * 100
-            cer = calc_cer(target, pred) * 100
-            to_log_pred.append(
-                f"true: '{target}' | pred: '{pred}' " f"| wer: {wer:.2f} | cer: {cer:.2f}")
-            to_log_pred_raw.append(f"true: '{target}' | pred: '{raw_pred}'\n")
-        self.writer.add_text(f"predictions", '< < < < > > > >'.join(to_log_pred))
-        self.writer.add_text(f"predictions_raw", '< < < < > > > >'.join(to_log_pred_raw))
+        for target, raw_pred, ctc_pred in tuples[:examples_to_log]:
+            wer = calc_wer(target, ctc_pred) * 100
+            cer = calc_cer(target, ctc_pred) * 100
+            to_log_pred_ctc.append(f"true: '{target}' | pred: '{ctc_pred}' " f"| wer: {wer:.2f} | cer: {cer:.2f}")
+            to_log_pred_raw.append(f"true: '{target}' | pred: '{raw_pred}'")
+
+        self.writer.add_text(f"predictions_ctc", '\n\n'.join(to_log_pred_ctc))
+        self.writer.add_text(f"predictions_raw", '\n\n'.join(to_log_pred_raw))
 
     def _log_spectrogram(self, spectrogram_batch):
         spectrogram = random.choice(spectrogram_batch)
