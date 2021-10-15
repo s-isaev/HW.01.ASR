@@ -27,6 +27,7 @@
         {
           "type": "LibrispeechDataset",
           "args": {
+            "data_dir": "/librispeech",
             "part": "train-clean-100",
             "max_audio_length": 20.0,
             "max_text_length": 300
@@ -41,6 +42,7 @@
         {
           "type": "LibrispeechDataset",
           "args": {
+            "data_dir": "/librispeech",
             "part": "test-clean",
             "max_audio_length": 20.0,
             "max_text_length": 300
