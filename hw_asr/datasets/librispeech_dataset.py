@@ -1,3 +1,4 @@
+from http.client import IM_USED
 import json
 import logging
 import os
@@ -12,6 +13,7 @@ from hw_asr.base.base_dataset import BaseDataset
 from hw_asr.text_encoder.ctc_char_text_encoder import CTCCharTextEncoder
 from hw_asr.utils import ROOT_PATH
 from hw_asr.utils.parse_config import ConfigParser
+from pathlib import PosixPath
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +35,8 @@ class LibrispeechDataset(BaseDataset):
         if data_dir is None:
             data_dir = ROOT_PATH / "data" / "datasets" / "librispeech"
             data_dir.mkdir(exist_ok=True, parents=True)
+        else:
+            data_dir = PosixPath(data_dir)
         self._data_dir = data_dir
         if part == 'train_all':
             index = sum([self._get_or_load_index(part)
