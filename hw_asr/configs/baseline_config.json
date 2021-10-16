@@ -1,5 +1,5 @@
 {
-  "name": "overfit_config",
+  "name": "basline_colab_config",
   "n_gpu": 1,
   "preprocessing": {
     "sr": 16000,

@@ -11,3 +11,4 @@ datasets
 torch_audiomentations
 editdistance
 ASR_metrics
+fast-ctc-decode

@@ -23,20 +23,6 @@ class CustomAudioDataset(BaseDataset):
 
         super().__init__(index, *args, **kwargs)
 
-    def __getitem__(self, ind):
-        data_dict = self._index[ind]
-        wav_path = data_dict["path"]
-        audio_wave = self.load_audio(wav_path)
-        audio_wave, audio_spec = self.process_wave(audio_wave)
-        return {
-            "audio": audio_wave,
-            "spectrogram": audio_spec,
-            "duration": data_dict["audio_len"],
-            "text": data_dict["text"],
-            "text_encoded": self.text_encoder.encode(data_dict["text"]),
-            "audio_path": wav_path,
-        }
-
 
 if __name__ == "__main__":
     text_encoder = CTCCharTextEncoder.get_simple_alphabet()

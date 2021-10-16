@@ -82,10 +82,12 @@ class Trainer(BaseTrainer):
         self.optimizer.zero_grad()
 
         batch["logits"] = self.model(**batch)
+        batch["probs"] = F.softmax(batch["logits"], dim=-1)
         batch["log_probs"] = F.log_softmax(batch["logits"], dim=-1)
         batch["log_probs_length"] = self.model.transform_input_lengths(
             batch["spectrogram_length"]
         )
+        batch["do_beam_search"] = False
         loss = self.criterion(**batch)
         loss.backward()
         self._clip_grad_norm()
@@ -163,10 +165,13 @@ class Trainer(BaseTrainer):
                     total=len(self.valid_data_loader)
             ):
                 batch = self.move_batch_to_device(batch, self.device)
-                batch["log_probs"] = self.model(**batch)
+                batch["logits"] = self.model(**batch)
+                batch["probs"] = F.softmax(batch["logits"], dim=-1)
+                batch["log_probs"] = F.log_softmax(batch["logits"], dim=-1)
                 batch["log_probs_length"] = self.model.transform_input_lengths(
                     batch["spectrogram_length"]
                 )
+                batch["do_beam_search"] = True
                 loss = self.criterion(**batch)
 
                 self.valid_metrics.update("loss", loss.item(), n=len(batch["text"]))
@@ -195,6 +200,7 @@ class Trainer(BaseTrainer):
     def _log_predictions(
             self,
             text,
+            probs,
             log_probs,
             log_probs_length,
             examples_to_log=5,
@@ -205,23 +211,36 @@ class Trainer(BaseTrainer):
         if self.writer is None:
             return
 
-        predictions = log_probs.cpu().argmax(-1).tolist()
+        predictions_log_probs = log_probs.cpu().argmax(-1).tolist()
         for i, log_len in enumerate(log_probs_length.tolist()):
-            predictions[i] = predictions[i][:log_len]
+            predictions_log_probs[i] = predictions_log_probs[i][:log_len]
 
-        ctc_pred_text = [self.text_encoder.ctc_decode(p) for p in predictions]
-        raw_pred_text = [self.text_encoder.decode(p) for p in predictions]
+        c_probs = probs.cpu()
+        predictions_probs = []
+        for i, log_len in enumerate(log_probs_length.tolist()):
+            predictions_probs.append(c_probs[i][:log_len])
 
-        tuples = list(zip(text, raw_pred_text, ctc_pred_text))
+        ctc_pred_text = [self.text_encoder.ctc_decode(p) for p in predictions_log_probs]
+        raw_pred_text = [self.text_encoder.decode(p) for p in predictions_log_probs]
+        beam_pred_text = [self.text_encoder.ctc_beam_search(p) for p in predictions_probs]
+
+        tuples = list(zip(text, raw_pred_text, ctc_pred_text, beam_pred_text))
         shuffle(tuples)
         to_log_pred_ctc = []
         to_log_pred_raw = []
-        for target, raw_pred, ctc_pred in tuples[:examples_to_log]:
+        to_log_pred_beam = []
+        for target, raw_pred, ctc_pred, beam_pred in tuples[:examples_to_log]:
+            wer = calc_wer(target, beam_pred) * 100
+            cer = calc_cer(target, beam_pred) * 100
+            to_log_pred_beam.append(f"true: '{target}' | pred: '{beam_pred}' " f"| wer: {wer:.2f} | cer: {cer:.2f}")
+
             wer = calc_wer(target, ctc_pred) * 100
             cer = calc_cer(target, ctc_pred) * 100
             to_log_pred_ctc.append(f"true: '{target}' | pred: '{ctc_pred}' " f"| wer: {wer:.2f} | cer: {cer:.2f}")
+
             to_log_pred_raw.append(f"true: '{target}' | pred: '{raw_pred}'")
 
+        self.writer.add_text(f"predictions_beam", '\n\n'.join(to_log_pred_beam))
         self.writer.add_text(f"predictions_ctc", '\n\n'.join(to_log_pred_ctc))
         self.writer.add_text(f"predictions_raw", '\n\n'.join(to_log_pred_raw))
 
