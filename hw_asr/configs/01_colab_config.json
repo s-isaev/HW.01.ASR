@@ -1,0 +1,97 @@
+{
+  "name": "01_colab_config",
+  "n_gpu": 1,
+  "preprocessing": {
+    "sr": 16000,
+    "spectrogram": {
+      "type": "MelSpectrogram",
+      "args": {}
+    }
+  },
+  "augmentations": {
+    "wave": [],
+    "spectrogram": []
+  },
+  "arch": {
+    "type": "Model01",
+    "args": {
+      "n_feats": 128,
+      "fc_hidden": 512
+    }
+  },
+  "data": {
+    "train": {
+      "batch_size": 40,
+      "num_workers": 5,
+      "datasets": [
+        {
+          "type": "LibrispeechDataset",
+          "args": {
+            "data_dir": "/librispeech",
+            "part": "train-clean-360",
+            "max_audio_length": 20.0,
+            "max_text_length": 300
+          }
+        }
+      ]
+    },
+    "val": {
+      "batch_size": 40,
+      "num_workers": 5,
+      "datasets": [
+        {
+          "type": "LibrispeechDataset",
+          "args": {
+            "data_dir": "/librispeech",
+            "part": "test-clean",
+            "max_audio_length": 20.0,
+            "max_text_length": 300
+          }
+        }
+      ]
+    }
+  },
+  "optimizer": {
+    "type": "Adagrad",
+    "args": {}
+  },
+  "lr_scheduler": {
+    "type": "StepLR",
+    "args": {
+      "step_size": 1,
+      "gamma": 1,
+      "last_epoch": -1
+    }
+  },
+  "loss": {
+    "type": "CTCLoss",
+    "args": {}
+  },
+  "metrics": [
+    {
+      "type": "ArgmaxWERMetric",
+      "args": {
+        "name": "WER (argmax)"
+      }
+    },
+    {
+      "type": "ArgmaxCERMetric",
+      "args": {
+        "name": "CER (argmax)"
+      }
+    }
+  ],
+  "trainer": {
+    "epochs": 1000,
+    "save_dir": "/content/drive/HSE/DLA/HW/01.ASR/saved",
+    "save_period": 5,
+    "verbosity": 1,
+    "monitor": "min val_loss",
+    "early_stop": 100,
+    "tensorboard": true,
+    "len_epoch": 10000,
+    "log_step": 500,
+    "skip_oom": false,
+    "grad_norm_clip": 10
+  }
+}
