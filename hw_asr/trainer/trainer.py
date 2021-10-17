@@ -23,7 +23,8 @@ class Trainer(BaseTrainer):
             self,
             model,
             criterion,
-            metrics,
+            metrics_train,
+            metrics_valid,
             optimizer,
             config,
             device,
@@ -35,7 +36,7 @@ class Trainer(BaseTrainer):
             skip_oom=True,
             log_step=None
     ):
-        super().__init__(model, criterion, metrics, optimizer, config, device)
+        super().__init__(model, criterion, metrics_train, metrics_valid, optimizer, config, device)
         self.skip_oom = skip_oom
         self.text_encoder = text_encoder
         self.config = config
@@ -52,11 +53,17 @@ class Trainer(BaseTrainer):
         self.lr_scheduler = lr_scheduler
         self.log_step = 10 if log_step is None else log_step
 
-        self.train_metrics = MetricTracker(
-            "loss", "grad norm", *[m.name for m in self.metrics], writer=self.writer
+        self.train_metrics_tracker = MetricTracker(
+            "loss", "grad norm",
+            *[m.name for m in self.metrics_train], writer=self.writer
         )
-        self.valid_metrics = MetricTracker(
-            "loss", *[m.name for m in self.metrics], writer=self.writer
+        self.train_metrics_log_step_tracker = MetricTracker(
+            "loss", "grad norm",
+            *[m.name for m in self.metrics_train], writer=self.writer
+        )
+        self.valid_metrics_tracker = MetricTracker(
+            "loss",
+            *[m.name for m in self.metrics_valid], writer=self.writer
         )
 
     @staticmethod
@@ -78,6 +85,9 @@ class Trainer(BaseTrainer):
             )
 
     def _train_iteration(self, batch: dict, epoch: int, batch_num: int):
+        if batch_num  % self.log_step == 0:
+            self.train_metrics_log_step_tracker.reset()
+
         batch = self.move_batch_to_device(batch, self.device)
         self.optimizer.zero_grad()
 
@@ -87,7 +97,7 @@ class Trainer(BaseTrainer):
         batch["log_probs_length"] = self.model.transform_input_lengths(
             batch["spectrogram_length"]
         )
-        batch["do_beam_search"] = False
+
         loss = self.criterion(**batch)
         loss.backward()
         self._clip_grad_norm()
@@ -96,13 +106,18 @@ class Trainer(BaseTrainer):
         if self.lr_scheduler is not None:
             self.lr_scheduler.step()
 
-        self.writer.set_step((epoch - 1) * self.len_epoch + batch_num)
-        self.train_metrics.update("loss", loss.item())
-        for met in self.metrics:
-            self.train_metrics.update(met.name, met(**batch))
-        self.train_metrics.update("grad norm", self.get_grad_norm())
+        self.train_metrics_tracker.update("loss", loss.item())
+        self.train_metrics_log_step_tracker.update("loss", loss.item())
+        for met in self.metrics_train:
+            met_val = met(**batch)
+            self.train_metrics_tracker.update(met.name, met_val)
+            self.train_metrics_log_step_tracker.update(met.name, met_val)
+        grad_norm = self.get_grad_norm()
+        self.train_metrics_tracker.update("grad norm", grad_norm)
+        self.train_metrics_log_step_tracker.update("grad norm", grad_norm)
 
-        if batch_num % self.log_step == 0:
+        if (batch_num + 1) % self.log_step == 0:
+            self.writer.set_step((epoch - 1) * self.len_epoch + batch_num, mode="train")
             self.logger.debug(
                 "Train Epoch: {} {} Loss: {:.6f}".format(
                     epoch, self._progress(batch_num), loss.item()
@@ -113,7 +128,7 @@ class Trainer(BaseTrainer):
             )
             self._log_predictions(part="train", **batch)
             self._log_spectrogram(batch["spectrogram"])
-            self._log_scalars(self.train_metrics)
+            self._log_scalars(self.train_metrics_log_step_tracker)
 
     def _train_epoch(self, epoch):
         """
@@ -123,7 +138,7 @@ class Trainer(BaseTrainer):
         :return: A log that contains average loss and metric in this epoch.
         """
         self.model.train()
-        self.train_metrics.reset()
+        self.train_metrics_tracker.reset()
         self.writer.add_scalar("epoch", epoch)
         for batch_idx, batch in enumerate(
                 tqdm(self.data_loader, desc="train", total=self.len_epoch)
@@ -142,8 +157,8 @@ class Trainer(BaseTrainer):
                     raise e
             if batch_idx >= self.len_epoch:
                 break
-        log = self.train_metrics.result()
 
+        log = self.train_metrics_tracker.result()
         if self.do_validation:
             val_log = self._valid_epoch(epoch)
             log.update(**{"val_" + k: v for k, v in val_log.items()})
@@ -158,7 +173,7 @@ class Trainer(BaseTrainer):
         :return: A log that contains information about validation
         """
         self.model.eval()
-        self.valid_metrics.reset()
+        self.valid_metrics_tracker.reset()
         with torch.no_grad():
             for batch_idx, batch in tqdm(
                     enumerate(self.valid_data_loader), desc="validation",
@@ -171,21 +186,21 @@ class Trainer(BaseTrainer):
                 batch["log_probs_length"] = self.model.transform_input_lengths(
                     batch["spectrogram_length"]
                 )
-                batch["do_beam_search"] = True
+                
                 loss = self.criterion(**batch)
 
-                self.valid_metrics.update("loss", loss.item(), n=len(batch["text"]))
-                for met in self.metrics:
-                    self.valid_metrics.update(met.name, met(**batch))
-            self.writer.set_step(epoch * self.len_epoch, "valid")
-            self._log_scalars(self.valid_metrics)
+                self.valid_metrics_tracker.update("loss", loss.item(), n=len(batch["text"]))
+                for met in self.metrics_valid:
+                    self.valid_metrics_tracker.update(met.name, met(**batch))
+            self.writer.set_step(epoch * self.len_epoch, mode="valid")
+            self._log_scalars(self.valid_metrics_tracker)
             self._log_predictions(part="val", **batch)
             self._log_spectrogram(batch["spectrogram"])
 
         # add histogram of model parameters to the tensorboard
         for name, p in self.model.named_parameters():
             self.writer.add_histogram(name, p, bins="auto")
-        return self.valid_metrics.result()
+        return self.valid_metrics_tracker.result()
 
     def _progress(self, batch_idx):
         base = "[{}/{} ({:.0f}%)]"

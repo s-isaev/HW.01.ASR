@@ -67,7 +67,7 @@
     "type": "CTCLoss",
     "args": {}
   },
-  "metrics": [
+  "metrics_train": [
     {
       "type": "ArgmaxWERMetric",
       "args": {
@@ -78,6 +78,32 @@
       "type": "ArgmaxCERMetric",
       "args": {
         "name": "CER (argmax)"
+      }
+    }
+  ],
+  "metrics_valid": [
+    {
+      "type": "ArgmaxWERMetric",
+      "args": {
+        "name": "WER (argmax)"
+      }
+    },
+    {
+      "type": "BeamWERMetric",
+      "args": {
+        "name": "WER (beam)"
+      }
+    },
+    {
+      "type": "ArgmaxCERMetric",
+      "args": {
+        "name": "CER (argmax)"
+      }
+    },
+    {
+      "type": "BeamCERMetric",
+      "args": {
+        "name": "CER (beam)"
       }
     }
   ],
