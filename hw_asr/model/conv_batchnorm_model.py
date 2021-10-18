@@ -40,12 +40,14 @@ class ConvBatchnormModel(BaseModel):
 
         x = x.reshape(batc_size*spec_size, feat_size)
         x = self.norm1(x)
+        x = x.reshape(batc_size*spec_size, 1, feat_size)
         x = self.conv1(x)
         x = self.crelu1(x)
         x = self.conv2(x)
         x = self.crelu2(x)
         x = self.conv3(x)
         x = self.crelu3(x)
+        x = x.reshape(batc_size*spec_size, feat_size)
         x = self.norm2(x)
         x = x.reshape(batc_size, spec_size, feat_size*4)
 
