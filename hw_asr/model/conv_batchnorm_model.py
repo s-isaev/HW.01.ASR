@@ -39,9 +39,9 @@ class ConvBatchnormModel(BaseModel):
         
         x = F.relu(self.lstm1(x)[0])
         x = F.relu(self.lstm2(x)[0])
-        x = F.relu(self.lstm3(x)[0])
-        x = F.relu(self.lstm4(x)[0])
-        x = F.relu(self.lstm5(x)[0])
+        #x = F.relu(self.lstm3(x)[0])
+        #x = F.relu(self.lstm4(x)[0])
+        #x = F.relu(self.lstm5(x)[0])
         x = self.fc(x)
 
         return x
