@@ -51,7 +51,7 @@ class ConvBatchnormModel(BaseModel):
         x = self.norm2(x)
         x = x.reshape(batc_size, spec_size, feat_size*4)
 
-        x, (hn, cn) = self.lstm1(spectrogram)
+        x, (hn, cn) = self.lstm1(x)
         x = self.relu1(x)
         x, (hn, cn) = self.lstm2(x)
         x = self.relu2(x)
