@@ -17,7 +17,7 @@ class ConvBatchnormModel(BaseModel):
         self.crelu2 = nn.ReLU()
         self.conv3 = nn.Conv1d(in_channels=4, out_channels=4, kernel_size=8, padding='same')
         self.crelu3 = nn.ReLU()
-        self.norm2 = nn.BatchNorm1d(256)
+        self.norm2 = nn.BatchNorm1d(512)
 
         self.lstm1  = nn.LSTM(input_size=512, hidden_size=128, num_layers=2, batch_first=True, bidirectional=True)
         self.relu1 = nn.ReLU()
