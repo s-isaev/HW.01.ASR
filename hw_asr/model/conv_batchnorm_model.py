@@ -35,9 +35,9 @@ class ConvBatchnormModel(BaseModel):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
-        x = x.reshape(batch_size*spect_size, 512)
+        x = x.reshape(batch_size*spect_size, 256)
         x = self.bn2(x)
-        x = x.reshape(batch_size, spect_size, 512)
+        x = x.reshape(batch_size, spect_size, 256)
 
         
         x = F.relu(self.lstm1(x)[0])
