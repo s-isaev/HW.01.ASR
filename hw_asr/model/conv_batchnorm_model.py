@@ -16,12 +16,11 @@ class ConvBatchnormModel(BaseModel):
         self.conv3 = nn.Conv1d(in_channels=4, out_channels=4, kernel_size=8, padding='same')
         self.bn2 = nn.BatchNorm1d(512)
 
-        self.lstm1 = nn.LSTM(input_size=512, hidden_size=256, num_layers=2, batch_first=True, bidirectional=True)
-        self.lstm2 = nn.LSTM(input_size=512, hidden_size=256, num_layers=2, batch_first=True, bidirectional=True)
-        self.lstm3 = nn.LSTM(input_size=512, hidden_size=256, num_layers=2, batch_first=True, bidirectional=True)
-        self.lstm4 = nn.LSTM(input_size=512, hidden_size=256, num_layers=2, batch_first=True, bidirectional=True)
-        self.lstm5 = nn.LSTM(input_size=512, hidden_size=256, num_layers=2, batch_first=True, bidirectional=True)
-        self.lstm6 = nn.LSTM(input_size=512, hidden_size=128, num_layers=2, batch_first=True, bidirectional=True)
+        self.lstm1 = nn.LSTM(input_size=512, hidden_size=200, num_layers=2, batch_first=True, bidirectional=True)
+        self.lstm2 = nn.LSTM(input_size=400, hidden_size=200, num_layers=2, batch_first=True, bidirectional=True)
+        self.lstm3 = nn.LSTM(input_size=400, hidden_size=200, num_layers=2, batch_first=True, bidirectional=True)
+        self.lstm4 = nn.LSTM(input_size=400, hidden_size=200, num_layers=2, batch_first=True, bidirectional=True)
+        self.lstm5 = nn.LSTM(input_size=400, hidden_size=128, num_layers=2, batch_first=True, bidirectional=True)
         self.fc = nn.Linear(in_features=256, out_features=n_class)
 
     def forward(self, spectrogram, *args, **kwargs):
@@ -46,7 +45,6 @@ class ConvBatchnormModel(BaseModel):
         x = F.relu(self.lstm3(x)[0])
         x = F.relu(self.lstm4(x)[0])
         x = F.relu(self.lstm5(x)[0])
-        x = F.relu(self.lstm6(x)[0])
         x = self.fc(x)
 
         return x
