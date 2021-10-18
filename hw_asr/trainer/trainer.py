@@ -116,8 +116,10 @@ class Trainer(BaseTrainer):
         self.train_metrics_tracker.update("grad norm", grad_norm)
         self.train_metrics_log_step_tracker.update("grad norm", grad_norm)
 
+        # Каждый раз делаем set step, чтобы работало steps per second
+        self.writer.set_step((epoch - 1) * self.len_epoch + batch_num, mode="train")
+
         if (batch_num + 1) % self.log_step == 0:
-            self.writer.set_step((epoch - 1) * self.len_epoch + batch_num, mode="train")
             self.logger.debug(
                 "Train Epoch: {} {} Loss: {:.6f}".format(
                     epoch, self._progress(batch_num), loss.item()

@@ -41,8 +41,9 @@ class CTCCharTextEncoder(CharTextEncoder):
         assert len(probs.shape) == 2
         char_length, voc_size = probs.shape
         assert voc_size == len(self.ind2char)
-        return beam_search(probs.detach().cpu().numpy(), self.alphabet, beam_size=beam_size)[0]
+        
         # TODO: your code here
+        return beam_search(probs.detach().cpu().numpy(), self.alphabet, beam_size=beam_size)[0]
 
         hypos = [('^', 1.0)]
         for el in probs:
