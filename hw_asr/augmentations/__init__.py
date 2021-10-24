@@ -9,8 +9,11 @@ from hw_asr.utils.parse_config import ConfigParser
 
 def from_configs(configs: ConfigParser):
     wave_augs = []
+    print("Augs:", "augmentations" in configs.config)
     if "augmentations" in configs.config and "wave" in configs.config["augmentations"]:
+        print("Wave:", "wave" in configs.config["augmentations"])
         for aug_dict in configs.config["augmentations"]["wave"]:
+            print(aug_dict)
             wave_augs.append(
                 configs.init_obj(aug_dict, hw_asr.augmentations.wave_augmentations)
             )

@@ -1,5 +1,5 @@
 {
-  "name": "overfit_config",
+  "name": "final_config_pre",
   "n_gpu": 1,
   "preprocessing": {
     "sr": 16000,
@@ -30,7 +30,7 @@
     "spectrogram": []
   },
   "arch": {
-    "type": "OverfitModel",
+    "type": "Model02",
     "args": {
       "n_feats": 128,
       "fc_hidden": 512
@@ -38,31 +38,31 @@
   },
   "data": {
     "train": {
-      "batch_size": 20,
+      "batch_size": 40,
       "num_workers": 5,
       "datasets": [
         {
           "type": "LibrispeechDataset",
           "args": {
-            "part": "dev-clean",
+            "data_dir": "/librispeech",
+            "part": "train-clean-360",
             "max_audio_length": 20.0,
-            "max_text_length": 200,
-            "limit": 20
+            "max_text_length": 300
           }
         }
       ]
     },
     "val": {
-      "batch_size": 20,
+      "batch_size": 40,
       "num_workers": 5,
       "datasets": [
         {
           "type": "LibrispeechDataset",
           "args": {
-            "part": "dev-clean",
+            "data_dir": "/librispeech",
+            "part": "test-clean",
             "max_audio_length": 20.0,
-            "max_text_length": 200,
-            "limit": 20
+            "max_text_length": 300
           }
         }
       ]
@@ -125,15 +125,16 @@
     }
   ],
   "trainer": {
-    "epochs": 50,
-    "save_dir": "saved/",
-    "save_period": 5,
+    "epochs": 1000,
+    "save_dir": "/content/drive/MyDrive/HSE/DLA/HW/01.ASR/saved",
+    "save_period": 1,
     "verbosity": 1,
     "monitor": "min val_loss",
     "early_stop": 100,
     "tensorboard": true,
-    "len_epoch": 100,
-    "log_step": 10,
+    "len_epoch": 10000,
+    "log_step": 500,
+    "skip_oom": false,
     "grad_norm_clip": 10
   }
 }
