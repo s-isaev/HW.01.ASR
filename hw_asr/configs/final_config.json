@@ -1,5 +1,5 @@
 {
-  "name": "final_config_pre",
+  "name": "final_config",
   "n_gpu": 1,
   "preprocessing": {
     "sr": 16000,
