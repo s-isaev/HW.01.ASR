@@ -19,10 +19,6 @@
         "args": {}
       },
       {
-        "type": "TimeStretch",
-        "args": {}
-      },
-      {
         "type": "PolarityInversion",
         "args": {}
       }
