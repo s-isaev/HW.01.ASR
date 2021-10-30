@@ -15,6 +15,8 @@ from hw_asr.utils import ROOT_PATH
 from hw_asr.utils.parse_config import ConfigParser
 
 import torch.nn.functional as F
+import os
+from hw_asr.metric.utils import calc_cer, calc_wer
 
 DEFAULT_TEST_CONFIG_PATH = ROOT_PATH / "default_test_config.json"
 DEFAULT_CHECKPOINT_PATH = ROOT_PATH / "default_test_model" / "checkpoint.pth"
@@ -50,6 +52,8 @@ def main(config, out_file):
     model.eval()
 
     results = []
+    cer_beam = []
+    wer_beam = []
 
     with torch.no_grad():
         for i, batch in enumerate(tqdm(dataloaders["test"])):
@@ -78,7 +82,7 @@ def main(config, out_file):
 
             ctc_pred_text = [text_encoder.ctc_decode(p) for p in predictions_log_probs]
             raw_pred_text = [text_encoder.decode(p) for p in predictions_log_probs]
-            beam_pred_text = [text_encoder.ctc_beam_search(p)[0][0] for p in predictions_probs]
+            beam_pred_text = [text_encoder.ctc_beam_search(p) for p in predictions_probs]
 
             for i in range(len(text)):
                 results.append({
@@ -87,6 +91,10 @@ def main(config, out_file):
                     "pred_text_argmax": ctc_pred_text[i],
                     "pred_text_beam_search": beam_pred_text[i]
                 })
+                cer_beam.append(calc_cer(text[i], beam_pred_text[i]))
+                wer_beam.append(calc_wer(text[i], beam_pred_text[i]))
+    print("CER:", sum(cer_beam) / len(cer_beam))
+    print("WER:", sum(wer_beam) / len(wer_beam))
     with Path(out_file).open('w') as f:
         json.dump(results, f, indent=2)
 
@@ -96,14 +104,14 @@ if __name__ == "__main__":
     args.add_argument(
         "-c",
         "--config",
-        default=str(DEFAULT_TEST_CONFIG_PATH.absolute().resolve()),
+        default=str('hw_asr/configs/test_config.json'),
         type=str,
         help="config file path (default: None)",
     )
     args.add_argument(
         "-r",
         "--resume",
-        default=str(DEFAULT_CHECKPOINT_PATH.absolute().resolve()),
+        default="model_best.pth",
         type=str,
         help="path to latest checkpoint (default: None)",
     )
@@ -121,43 +129,22 @@ if __name__ == "__main__":
         type=str,
         help="File to write results (.json)",
     )
-    args.add_argument(
-        "-t",
-        "--test-data-folder",
-        default=None,
-        required=True,
-        type=str,
-        help="Path to dataset",
-    )
-    args.add_argument(
-        "-b",
-        "--batch-size",
-        default=20,
-        type=int,
-        help="Test dataset batch size",
-    )
-    args.add_argument(
-        "-j",
-        "--jobs",
-        default=1,
-        type=int,
-        help="Number of workers for test dataloader"
-    )
+
+    os.system("gdown https://drive.google.com/uc?id=1CDDP8CapgqbKv5k583KRHlGswC6fyVyY")
+    os.system("gdown https://drive.google.com/uc?id=1CdTBN2JkwaewCJ5NHebfu7uuGutJ1Tjr")
 
     config = ConfigParser.from_args(args)
 
     args = args.parse_args()
-    test_data_folder = Path(args.test_data_folder)
     config.config["data"] = {
         "test": {
-            "batch_size": args.batch_size,
-            "num_workers": args.jobs,
+            "batch_size": 40,
+            "num_workers": 5,
             "datasets": [
                 {
-                    "type": "CustomDirAudioDataset",
+                    "type": "LibrispeechDataset",
                     "args": {
-                        "audio_dir": test_data_folder / "audio",
-                        "transcription_dir": test_data_folder / "transcriptions",
+                        "part": "test-clean"
                     }
                 }
             ]
